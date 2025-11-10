@@ -1,0 +1,70 @@
+preferences:
+    general:
+        audioLib: SoundDevice
+        units: deg
+
+window:
+    size: [1920, 1080]
+    pos: [0, 0]
+    color: [0, 0, 0]
+    fullscr: True
+    winType: pyglet
+    waitBlanking: True
+    screen: 2
+
+monitor:
+    name: default
+    width: 69  # in cm
+    distance: 210  # NOTE - it is actually 196; but for consistency in size kept it at 210 
+    gamma: 2.1
+
+operating system: linux # specify the OS the code is run on as 'mac', 'linux', or 'windows'
+
+mouse:
+    visible: False
+
+eyetracker:
+    model: eyelink
+    address: '100.1.1.1'
+    dot_size: 0.1  # in deg
+    options: # Eyelink specific settings
+        active_eye: left  # [right]
+        calibration_type: HV5  # [H3, HV3, HV5, HV9], # Jurjen = HV5
+        sample_rate: 1000
+        calibration_area_proportion: 0.4 0.4
+        validation_area_proportion: 0.4 0.4                
+
+mri:
+    TR: 1.5  # seconds between volume acquisitions
+    topup_scan: True
+    topup_duration: 14 # topup scan duration in seconds (no 't's)
+
+    #only relevant for scanning simulations
+    # simulate: True #set this to true to simulate a virtual scanner   
+    # TA: 1.5  # seconds to acquire one volume
+    # volumes: 225  # number of 3D volumes to obtain in a given scanning run
+    # sync: t  # character used as flag for simulation sync timing, default=‘5’
+    # skip: 0  # how many frames to silently omit initially during T1 stabilization, no sync pulse.
+    # sound: False  # simulate scanner noise
+
+
+PRF stimulus settings:
+    Scanner sync: True                # set this to true to make bar move on input 't'
+    Screenshot: True
+    Squares in bar: 2
+    Bar pass steps: 20                # number of steps the bar takes to traverse the aperture
+    Blanks length: 10                  # length of interbar periods (-1 in orientation). like bar pass steps, in units of TRs or bar step length
+    Bar orientations: [-1, 0,  225, -1, 90, 315, -1,  180, 45, -1,  270, 135,  -1, -1]
+    Bar width in degrees: 1.25
+    Checkers motion speed: 3          # checkers motion speed. direction is randomly up/down at each bar step
+    Size fixation dot in degrees: 0.05 # dot changes color on average every two TRs (or bar steps)
+    # *************** SCOTOMA PARAMETERS *************************
+    Scotoma : False # False=no scotoma
+    Scotoma Position : [0.0, 0.0] # Centre of scotoma (circle on screen)
+    Scotoma radius in degrees: 2.0 # Radius of scotoma
+    
+    
+
+Task settings: 
+    response interval: 0.8 # time in s you allow the participant to respond that still counts as correct response
+    color switch interval: 3.5 # interval in s between color dot switches, note: a random decimal between -1 and +1 is added to it in the code 
