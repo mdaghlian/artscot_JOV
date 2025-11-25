@@ -1,5 +1,5 @@
 from setuptools import setup, find_packages
 setup(
-    name="pfa_scripts",
+    name="artscot_JOV",
     packages=find_packages(),
 )

@@ -1,7 +1,7 @@
 #fitting tolerance
 xtol: 0.0001
 ftol: 0.0001
-
+nr_jobs : 5
 # space our pRF lives in
 vf_extent: [-5, 5]
 

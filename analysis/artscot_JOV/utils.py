@@ -1,4 +1,89 @@
 import numpy as np
+import sys
+from prfpy_csenf.rf import *
+
+def mask_time_series(ts, mask, ts_axis = 1, zero_pad = False):    
+    '''mask_time_series    
+    Mask certain voxel time series for later fitting. This is useful if you want to fit a subset of voxels, 
+    to speed up fitting.
+
+    Input:
+    ----------
+    ts          np.ndarray          time series, default is nvx x time
+    mask        np.ndarray, bool    which vx to include (=True)
+    ts_axis     int                 which axis is time
+    zero_pad    bool                return the masked vx as flat time series    
+        
+    Output:
+    ----------
+    ts_out      np.ndarray          masked time series
+    '''
+    if zero_pad:
+        # initialize empty array and only keep the timecourses from label; 
+        # keeps the original dimensions for simplicity sake!     
+        ts_out = np.zeros_like(ts)
+
+        # insert timecourses 
+        lbl_true = np.where(mask == True)[0]
+        if ts_axis==0:
+            ts_out[:,lbl_true] = ts[:,lbl_true]
+        elif ts_axis==1:
+            ts_out[lbl_true,:] = ts[lbl_true,:]
+        else:
+            print('Bad ts_axis...')
+            sys.exit()
+    else:
+        # Don't pad everything...
+        if ts_axis==0:
+            ts_out = np.copy(ts[:,mask])        
+        elif ts_axis==1:
+            ts_out = np.copy(ts[mask,:])
+        else:
+            print('Bad ts_axis...')
+            sys.exit()
+    
+    return ts_out
+
+def dag_filter_for_nans(array):
+    """
+    filter out NaNs from an array
+    Copied from JH linescanning toolbox
+    """
+
+    if np.isnan(array).any():
+        return np.nan_to_num(array)
+    else:
+        return array
+
+def process_prfpy_out(prfpy_out, mask=None):    
+    '''process_prfpy_out
+    Fit parameters can come out with nans, and are in the wrong shape
+    If we masked certain timeseries, we want to go back and put in empty values for fitted parameters. 
+    This is so that the shape of the vector is nice... (i.e., fits on the surface)
+    '''
+    if mask is None:
+        mask = np.ones(prfpy_out.shape[0], dtype=bool)
+    total_n_vx = mask.shape[0]
+    n_vx_fit = prfpy_out.shape[0]
+    n_pars = prfpy_out.shape[1]
+    n_vx_in_mask = mask.sum()
+    assert n_vx_fit==n_vx_in_mask
+    
+    filled_pars = np.zeros((total_n_vx, n_pars))
+
+    filled_pars[mask,:] = dag_filter_for_nans(prfpy_out)
+
+    return filled_pars
+def set_tc_shape (tc_in, n_timepts = 225):
+    '''set_tc_shape
+    Force the timecourse to be n_units * n_time
+    '''
+    # *** ALWAYS n_units * n_time
+    if tc_in.shape[0] == n_timepts:
+        tc_out = tc_in.T
+    else:
+        tc_out = tc_in
+    return tc_out
 
 def get_d2_target(x,y, scotoma_info, edge_or_com='com'):
     if isinstance(scotoma_info['scotoma_centre'], list):
@@ -91,10 +176,7 @@ def is_xy_out_scotoma(x,y,scotoma_info):
         outside_scot = np.ones_like(x) * 1
 
     return outside_scot
-try: 
-    from prfpy.rf import *
-except:
-     from prfpy_csenf.rf import *
+
 def calculate_sup_idx(prf_obj, prfpy_stim, th=None):
     if th is None:
         th = {'min-rsq':.1}

@@ -8,8 +8,9 @@ import os
 opj = os.path.join
 import numpy as np
 
-from dag_prf_utils.utils import *
-from dag_prf_utils.stats import *
+from dpu_mini.utils import *
+from dpu_mini.stats import *
+from dpu_mini.fs_tools import dag_load_nverts
 
 def main(argv):
     """
@@ -53,11 +54,11 @@ def main(argv):
             print(main.__doc__)
             sys.exit(2)
 
-    # MORE PATHS
-    prf_dir = opj(derivatives_dir, prf_out)    
+    prf_dir = opj(derivatives_dir, prf_out)  
     output_dir = opj(prf_dir, sub, ses)
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
+    # Take the output from pybest folder
     inputdir    = opj(derivatives_dir, 'pybest', sub, ses, 'unzscored')
     search_for = ["run-", task, file_ending]
     if space != None:
@@ -74,7 +75,6 @@ def main(argv):
     lh_all_files = dag_find_file_in_folder([*search_for, 'hemi-L'], inputdir)
     rh_all_files = dag_find_file_in_folder([*search_for, 'hemi-R'], inputdir)
 
-    print('ONLY DOING RUNS 1 & 2')
     lh_files = []    
     for ff in lh_all_files:
         if ('run-1' in ff) or ('run-2' in ff):
@@ -125,10 +125,8 @@ def main(argv):
 
     # -> save the averaged runs in PSC [combined] (.npy format)
     # ** percent signal change **
-    lr_data_psc = dag_dct_detrending(
-        ts_au=mean_lr_data, 
-        n_trend_to_remove=False,
-        do_psc=True, 
+    lr_data_psc = dag_psc(
+        ts_in=mean_lr_data, 
         baseline_pt=baseline_pt,
         )
 
@@ -136,60 +134,10 @@ def main(argv):
     print('Sanity check...')
     print(np.mean(lr_data_psc, axis=1))
     print(np.mean(mean_lr_data, axis=1).shape)
-
+    
     lr_out_psc_file = opj(output_dir, f'{out}_hemi-LR_desc-avg_bold.npy')
     np.save(lr_out_psc_file, lr_data_psc)
     print(f'Saved {lr_out_psc_file}')        
-
-    # *** Also calculate the noise ceiling ***
-    # -> useful for seeing how good our fits are later...
-    # -> Split into 2 halves (half the runs)
-    n_runs = len(lh_files)
-    if n_runs==1:
-        print('Only 1 run, therefore cannot do noise ceiling')
-        return
-    n_runs_half = int(n_runs / 2)
-    lh_data_half1 = np.mean(np.stack(lh_data[:n_runs_half], axis=0), axis=0)
-    lh_data_half2 = np.mean(np.stack(lh_data[n_runs_half:], axis=0), axis=0)
-    rh_data_half1 = np.mean(np.stack(rh_data[:n_runs_half], axis=0), axis=0)
-    rh_data_half2 = np.mean(np.stack(rh_data[n_runs_half:], axis=0), axis=0)
-    # -> combine them
-    lr_half1_data = np.concatenate([lh_data_half1, rh_data_half1], axis=0)
-    lr_half2_data = np.concatenate([lh_data_half2, rh_data_half2], axis=0)
-
-    # -> convert to percent signal change 
-    psc_lr_half1 = dag_dct_detrending(
-        ts_au=lr_half1_data, 
-        n_trend_to_remove=False,
-        do_psc=True, 
-        baseline_pt=baseline_pt,)
-    psc_lr_half2 = dag_dct_detrending(
-        ts_au=lr_half2_data,
-        n_trend_to_remove=False,
-        do_psc=True, 
-        baseline_pt=baseline_pt,)        
-
-    # -> calculate the correlation between runs (for each voxel)
-    # should be an array of size [n_vx]
-    # only do it for vx that are not std = 0 
-    std_mask = psc_lr_half1.std(axis=1) != 0
-    std_mask &= psc_lr_half2.std(axis=1) != 0
-    std_idx = np.where(std_mask)[0]
-    run_correlation = np.zeros(psc_lr_half1.shape[0])
-
-    i_count = 0
-    for i in std_idx:
-        run_correlation[i] = np.corrcoef(psc_lr_half1[i, :], psc_lr_half2[i, :])[0,1]
-        i_count += 1
-        if i_count % 5000 == 0:
-            print(f'Calculating correlation for voxel {i_count} of {psc_lr_half1.shape[0]}')
-    # run_correlation[run_correlation<0] = 0
-    # run_correlation = run_correlation**2 # R squared
-    print(f'Run correlation: {run_correlation}')
-    # -> save it
-    run_correlation_file = opj(output_dir, f'{out}_hemi-LR_run_correlation.npy')
-    np.save(run_correlation_file, run_correlation)
-    print(f'Saved {run_correlation_file}')            
 
 
 

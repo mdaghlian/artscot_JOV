@@ -5,142 +5,26 @@ import nibabel as nb
 import yaml
 import pickle
 import os
-try:
-    from prfpy.stimulus import PRFStimulus2D
-except:
-    from prfpy_csenf.stimulus import PRFStimulus2D
+import sys
+
+from prfpy_csenf.stimulus import PRFStimulus2D
 import pandas as pd
-from collections import defaultdict as dd
-from dag_prf_utils.utils import *
+from dpu_mini.utils import *
+from dpu_mini.fs_tools import *
+from artscot_JOV.utils import *
 
-def dd_func():
-    return "Not present"
-# import cortex
+
 opj = os.path.join
-
-
 source_data_dir = os.getenv("DIR_DATA_SOURCE")
-derivatives_dir = '/data1/projects/dumoulinlab/Lab_members/Marcus/projects/pilot1/derivatives'#os.getenv("DIR_DATA_DERIV")
-code_dir = '/data1/projects/dumoulinlab/Lab_members/Marcus/projects/pilot1/code/PFA_clean/pfa_scripts'#os.getenv("DIR_DATA_DERIV")
-default_prf_dir = opj(derivatives_dir, 'prf_no_hrf')
-wm_prf_dir = opj(derivatives_dir, 'wm_prf')
-default_prf_refit_dir = opj(derivatives_dir, 'prf_refit')
-default_prf_xpred_dir = opj(derivatives_dir, 'prf_xpred')
-not_psc_dir = opj(derivatives_dir, 'prf_not_psc_tc')
+derivatives_dir = '/data1/projects/dumoulinlab/Lab_members/Marcus/projects/pilot1/derivatives'
+code_dir = '/data1/projects/dumoulinlab/Lab_members/Marcus/projects/pilot1/code/artscot_JOV'
+default_prf_dir = opj(derivatives_dir, 'prf_for_pub')
 default_ses = 'ses-1'
 
-'''
-For each subject we have:
-* data_tc:
-    The real timeseries data (in psc, baselined). 
-    Where?          prf_dir, sub, ses (.npy file)
-    Var?            task
-* prf_params + prf_pred + prf_settings:
-    Fit on real_tc
-    Where?          prf_dir, sub, ses (.pkl file)
-    Var?            task, model, roi_fit, fit_stage
-
-* sim_tc:
-    The *simulated* timeseries data
-    Where?          prf_xpred_dir
-    Var?            task, model, roi_fit        
-* Xprf_params + Xprf_pred + Xprf_settings
-    The fits on the simulated timeseries data
-    Where?          prf_xpred_dir
-    Var?            task, model, roi_fit, fit_stage        
-'''
-
 def get_yml_settings_path(yml_name='s0_prf_analysis.yml'):
-    yml_folder_path = '/data1/projects/dumoulinlab/Lab_members/Marcus/projects/pilot1/code/PFA_clean/pfa_scripts/s0_analysis_steps/'
+    yml_folder_path = '/data1/projects/dumoulinlab/Lab_members/Marcus/projects/pilot1/code/artscot_JOV/analysis/s0_analysis_steps/'
     yml_path = opj(yml_folder_path, yml_name) 
     return yml_path
-
-# Speed up with concurrent futures
-import concurrent.futures
-# def load_file(file_path):
-#     try:
-#         # Attempt to load with memory mapping
-#         return np.load(file_path, mmap_mode='r')
-#     except ValueError as e:
-#         print(f"Error loading {file_path} with memory mapping: {e}. Falling back to normal load.")
-#         # Fallback to normal load if mmap fails
-#         return np.load(file_path)
-import h5py
-def load_hdf5_file(file_path):
-    with h5py.File(file_path, 'r') as f:
-        return f['data'][:]
-def load_AS0_to_ASX_pred(sub, model_list, task_list, roi_fit='all', ses=default_ses, look_in=default_prf_dir, **kwargs):
-    '''
-    Load AS0 fit - prediction with task
-    '''
-    include = kwargs.get('include', [])
-    if isinstance(include, str):
-        include = [include]
-
-    exclude = kwargs.get('exclude', None)
-    if isinstance(exclude, str):
-        exclude = [exclude]
-            
-    if isinstance(task_list, str):
-        task_list = [task_list]
-    if isinstance(model_list, str):
-        model_list = [model_list]
-
-    
-    prf_vars  = {}
-    this_dir = opj(look_in, sub, ses)
-    files_to_load = []
-    for task in task_list:
-        prf_vars[task] = {}
-        for model in model_list:
-            this_include = include + [sub, f'using-dm{task}', 'PREDS', model, roi_fit, '.h5']
-            prf_vars_path = dag_find_file_in_folder(this_include, this_dir, exclude=exclude)            
-            print(prf_vars_path)
-            # prf_vars[task][model] = load_hdf5_file(prf_vars_path)
-            # prf_vars[task][model] = np.load(prf_vars_path)
-
-            files_to_load.append((task, model, prf_vars_path))
-    
-    with concurrent.futures.ThreadPoolExecutor() as executor:
-        future_to_file = {executor.submit(load_hdf5_file, path): (task, model) for task, model, path in files_to_load}
-        for future in concurrent.futures.as_completed(future_to_file):
-            task, model = future_to_file[future]
-            try:
-                prf_vars[task][model] = future.result()
-            except Exception as exc:
-                print(f'File loading generated an exception: {exc}')
-    return prf_vars      
-
-
-
-def load_data_not_psc(sub, task_list, ses=default_ses, look_in=not_psc_dir, do_demo=False):
-    '''
-    Loads real data
-    '''
-    if isinstance(task_list, str):
-        task_list = [task_list]
-
-    data_tc  = {}
-    this_dir = opj(look_in, sub, ses)
-    for task in task_list:
-        data_tc_path = dag_find_file_in_folder([sub, ses, dag_hyphen_parse('task', task), 'hemi-LR', 'desc-not_psc', '.npy'], this_dir)
-        data_tc[task] = set_tc_shape(np.load(data_tc_path))
-        if do_demo:
-            data_tc[task] = data_tc[task][0:100,:]
-    return data_tc
-
-def load_data_mepi(sub, task_list, ses=default_ses, look_in=not_psc_dir):
-    if isinstance(task_list, str):
-        task_list = [task_list]
-
-    mepi  = {}
-    this_dir = opj(look_in, sub, ses)
-    for task in task_list:
-        data_tc_path = dag_find_file_in_folder([sub, ses, dag_hyphen_parse('task', task), 'hemi-LR', 'desc-not_psc', '.npy'], this_dir)
-        mepi[task] = set_tc_shape(np.load(data_tc_path)).mean(-1)
-    return mepi
-
-
 
 def load_data_tc(sub, task_list, ses=default_ses, look_in=default_prf_dir, do_demo=False, n_timepts=225):
     '''
@@ -202,93 +86,6 @@ def load_data_prf(sub, task_list, model_list, var_to_load='pars', roi_fit='all',
 
     return prf_vars  
 
-def load_sim_tc(sub, task_list, model_list, roi_fit='all', ses=default_ses, look_in=default_prf_xpred_dir):
-    if isinstance(task_list, str):
-        task_list = [task_list]
-    if isinstance(model_list, str):
-        model_list = [model_list]
-
-    sim_tc  = {}
-    this_dir = opj(look_in, sub, ses)    
-    for task in task_list:
-        sim_tc[task] = {}
-        for model in model_list:
-            sim_tc_path = dag_find_file_in_folder([sub, dag_hyphen_parse('task', task), model, roi_fit, '.npy'], this_dir)
-            sim_tc[task][model] = set_tc_shape(np.load(sim_tc_path))
-
-
-
-    return sim_tc
-
-def load_sim_prf(sub, task_list, model_list, var_to_load='pars', roi_fit='all', fit_stage='iter', ses=default_ses, look_in=default_prf_xpred_dir):
-    '''
-    Load PRF model fits on * SIMULATIONS *  (pkl file)
-    output a dict 
-        prf_vars[task][model]
-    Default loads 'pars' (prf params)
-    Can also specify settings or preds 
-    '''
-    if isinstance(task_list, str):
-        task_list = [task_list]
-    if isinstance(model_list, str):
-        model_list = [model_list]
-
-    prf_vars  = {}
-    this_dir = opj(look_in, sub, ses)
-    for task in task_list:
-        prf_vars[task] = {}
-        for model in model_list:
-            prf_vars_path = dag_find_file_in_folder([sub, dag_hyphen_parse('task', task), model, roi_fit, fit_stage, '.pkl'], this_dir)
-            pkl_file = open(prf_vars_path,'rb')
-            pkl_data = pickle.load(pkl_file)
-            pkl_file.close() 
-            print(pkl_data.keys())    
-            if 'pred' in var_to_load:
-                prf_vars[task][model] = set_tc_shape(pkl_data[var_to_load])
-            else:
-                prf_vars[task][model] = pkl_data[var_to_load]
-
-    return prf_vars  
-
-def load_data_prf_refit(sub, task_list, model_list, refit_ps=['x', 'y'], var_to_load='pars', roi_fit='all', fit_stage='iter', ses=default_ses, look_in=default_prf_refit_dir, **kwargs):
-    '''
-    Load PRF model fits on * DATA *  (pkl file)
-    output a dict 
-        prf_vars[task][model]
-    Default loads 'pars' (prf params)
-    Can also specify settings or preds 
-    '''
-    include = kwargs.get('include', ['tc'])
-    if isinstance(include, str):
-        include = [include]
-    include += refit_ps
-    
-    exclude = kwargs.get('exclude', None)
-    if isinstance(exclude, str):
-        exclude = [exclude]
-            
-    if isinstance(task_list, str):
-        task_list = [task_list]
-    if isinstance(model_list, str):
-        model_list = [model_list]
-
-    prf_vars  = {}
-    this_dir = opj(look_in, sub, ses)
-    for task in task_list:
-        prf_vars[task] = {}
-        for model in model_list:
-            this_include = include + [sub, dag_hyphen_parse('task', task), model, roi_fit, fit_stage, '.pkl']
-            prf_vars_path = dag_find_file_in_folder(this_include, this_dir, exclude=exclude)            
-            pkl_file = open(prf_vars_path,'rb')
-            pkl_data = pickle.load(pkl_file)
-            pkl_file.close()     
-            if 'pred' in var_to_load:
-                prf_vars[task][model] = set_tc_shape(pkl_data[var_to_load])
-            else:
-                prf_vars[task][model] = pkl_data[var_to_load]
-
-    return prf_vars  
-
 def get_number_of_vx(sub):
     num_vx = np.sum(load_nverts(sub))
     return num_vx
@@ -314,58 +111,6 @@ def get_roi(sub, label, **kwargs):
     '''
     # roi = label
     roi_idx = dag_load_roi(sub=sub, roi=label, fs_dir=opj(derivatives_dir, 'freesurfer'), **kwargs)
-    # # If *ALL* voxels to be included
-    # if roi=='all':
-    #     total_num_vx = np.sum(load_nverts(sub))
-
-    #     roi_idx = np.ones(total_num_vx, dtype=bool)
-    #     return roi_idx    
-    # if roi=='demo': # for rapid testing - only include first 100 vx
-    #     total_num_vx = np.sum(load_nverts(sub))
-    #     roi_idx = np.zeros(total_num_vx, dtype=bool)
-    #     roi_idx[:100] = True
-    #     return roi_idx    
-
-    # # Else look for rois in subs freesurfer label folder
-    # roi_dir = opj(derivatives_dir, 'freesurfer', sub, 'label')
-    # if not isinstance(roi, list): # roi can be a list 
-    #     roi = [roi]    
-    
-    # roi_idx = []
-    # for this_roi in roi:    
-    #     # Find the corresponding files
-    #     if 'not' in this_roi:
-    #         do_not = True
-    #         this_roi = this_roi.split('-')[-1]
-    #     else:
-    #         do_not = False
-    #     roi_file = {}        
-    #     roi_file['L'] = dag_find_file_in_folder([this_roi, '.thresh', '.label', 'lh'], roi_dir, return_msg=None)    
-    #     roi_file['R'] = dag_find_file_in_folder([this_roi, '.thresh', '.label', 'rh'], roi_dir, return_msg=None)
-    #     if roi_file['L']==None:
-    #         roi_file['L'] = dag_find_file_in_folder([this_roi, '.label', 'lh'], roi_dir, exclude='._')    
-    #         roi_file['R'] = dag_find_file_in_folder([this_roi, '.label', 'rh'], roi_dir, exclude='._')
-
-    #     n_verts = load_nverts(sub)
-    #     LR_bool = []
-    #     for i,hemi in enumerate(['L', 'R']):
-    #         with open(roi_file[hemi]) as f:
-    #             contents = f.readlines()
-            
-    #         idx_str = [contents[i].split(' ')[0] for i in range(2,len(contents))]
-    #         idx_int = [int(idx_str[i]) for i in range(len(idx_str))]
-    #         this_bool = np.zeros(n_verts[i], dtype=bool)
-    #         this_bool[idx_int] = True
-    #         if do_not:
-    #             this_bool = ~this_bool
-
-    #         LR_bool.append(this_bool)
-    #     this_roi_mask = np.concatenate(LR_bool)
-    #     roi_idx.append(this_roi_mask)
-    
-    # roi_idx = np.vstack(roi_idx)
-    # roi_idx = roi_idx.any(0)
-
     return roi_idx
 
 def get_design_matrix_npy(task_list, prf_dir=[]):
@@ -374,7 +119,7 @@ def get_design_matrix_npy(task_list, prf_dir=[]):
         task_list = [task_list]    
     dm_npy  = {}    
     for task in task_list:
-        dm_path = dag_find_file_in_folder(['design', task], code_dir)        
+        dm_path = dag_find_file_in_folder(['design', task], opj(code_dir, 'analysis', 'artscot_JOV'))        
         dm_npy[task] = scipy.io.loadmat(dm_path)['stim']
     return dm_npy
 
@@ -398,10 +143,7 @@ def get_prfpy_stim(sub, task_list, prf_dir=default_prf_dir,cut_vols=5):
 def get_exp_settings(sub, task_list, run='run-1', source_data_dir=source_data_dir):    
     exp_settings = {}
     for task in task_list:
-        if "AS" in task:
-            ses='ses-1'
-        elif "2R" in task:
-            ses='ses-2'            
+        ses='ses-1'
         this_dir = opj(source_data_dir, sub, ses)
 
         log_dir = dag_find_file_in_folder([sub, ses, task, run, 'Log'], this_dir)
@@ -468,13 +210,6 @@ def get_scotoma_info(sub):
     exptools_ssize = np.degrees(2 *np.arctan((39.3/2)/210))
     fitting_ssize = np.degrees(2 *np.arctan((39.3/2)/196))                
     conversion_factor = fitting_ssize / exptools_ssize
-    # if (sub=="sub-01"): # & (ses=="ses-1"):        
-    #     # need to convert from exp (I accidentally set screen distance to be 210, not 196)
-    #     exptools_ssize = np.degrees(2 *np.arctan((39.3/2)/210))
-    #     fitting_ssize = np.degrees(2 *np.arctan((39.3/2)/196))                
-    #     conversion_factor = fitting_ssize / exptools_ssize
-    # else:
-    #     conversion_factor=1
 
     scotoma_info['task-AS1'] = {
         'scotoma_centre' : [0.8284* conversion_factor,0.8284* conversion_factor] ,
@@ -542,8 +277,43 @@ def load_params_generic(params_file, load_all=False, load_var=[]):
 
     return params
 
-from dag_prf_utils.prfpy_functions import *
-from pfa_scripts.utils import *
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 # class ScotPrf1T1M(Prf1T1M):
 #     '''
@@ -898,21 +668,21 @@ from pfa_scripts.utils import *
 #         ax.set_title(f'{param} of voxels w/ rsq above {rsq_th}')
 #         ax.legend()
 
-def add_d2scotoma_to_obj(prf_obj):
+# def add_d2scotoma_to_obj(prf_obj):
     
-    # Check - is this a comparison thing?    
-    # if 'diff' in prf_obj.pd_params.keys():
-    #     is_comp = True
-    # else:
-    #     is_comp = False
-    for task in ['AS1', 'AS2']:
-        scot_info = get_scot_centre(task)
-        prf_obj.pd_params[f'd2s_{task}'] = dag_get_pos_change(
-            prf_obj.pd_params['x'],
-            prf_obj.pd_params['y'],
-            scot_info['scotoma_centre'][0],
-            scot_info['scotoma_centre'][1],
-        )
-    return prf_obj
+#     # Check - is this a comparison thing?    
+#     # if 'diff' in prf_obj.pd_params.keys():
+#     #     is_comp = True
+#     # else:
+#     #     is_comp = False
+#     for task in ['AS1', 'AS2']:
+#         scot_info = get_scot_centre(task)
+#         prf_obj.pd_params[f'd2s_{task}'] = dag_get_pos_change(
+#             prf_obj.pd_params['x'],
+#             prf_obj.pd_params['y'],
+#             scot_info['scotoma_centre'][0],
+#             scot_info['scotoma_centre'][1],
+#         )
+#     return prf_obj
     
 

@@ -1,4 +1,6 @@
-PFA_clean
+Run artificial scotoma analysis
+
+requirements 
 
 Fitting and plotting on PRF scot 
 Uses, JH linescanning toolbox to generate PRF fits.
