@@ -1,0 +1,6 @@
+[submodule "prf_packages/prfpy_csenf"]
+	path = prf_packages/prfpy_csenf
+	url = https://github.com/spinoza-centre/prfpy_csenf.git
+[submodule "prf_packages/dpu_mini"]
+	path = prf_packages/dpu_mini
+	url = https://github.com/mdaghlian/dpu_mini.git
