@@ -22,7 +22,7 @@ default_prf_dir = opj(derivatives_dir, 'prf_for_pub')
 default_ses = 'ses-1'
 
 def get_yml_settings_path(yml_name='s0_prf_analysis.yml'):
-    yml_folder_path = '/data1/projects/dumoulinlab/Lab_members/Marcus/projects/pilot1/code/artscot_JOV/analysis/s0_analysis_steps/'
+    yml_folder_path=opj(code_dir, 'analysis', 's0_analysis_steps')
     yml_path = opj(yml_folder_path, yml_name) 
     return yml_path
 
@@ -98,7 +98,25 @@ def load_nverts(sub):
         n_verts.append(verts)
     return n_verts
 
+
 def get_roi(sub, label, **kwargs):
+    '''
+    Return a boolean array of voxels included in the specified roi
+    array is vector with each entry corresponding to a point on the subjects cortical surface
+    (Note this is L & R hemi combined)
+
+    roi can be a list (in which case more than one is included)
+    roi can also be exclusive (i.e., everything *but* x)
+
+    TODO - conjunctive statements (not)
+    '''
+    import csv
+    look_in = kwargs.get('look_in', default_prf_dir)
+    # Loading
+    f = opj(look_in, sub, f'{sub}_roi.npz')
+    return np.load(f)[label]
+
+def get_roi_FS(sub, label, **kwargs):
     '''
     Return a boolean array of voxels included in the specified roi
     array is vector with each entry corresponding to a point on the subjects cortical surface
@@ -128,15 +146,17 @@ def get_prfpy_stim(sub, task_list, prf_dir=default_prf_dir,cut_vols=5):
         task_list = [task_list]
     dm_npy = get_design_matrix_npy(task_list, prf_dir=prf_dir)
     model_list = 'gauss'     # stimulus settings are the same for both norm & gauss models  (so only use gauss)     
-    fit_settings = load_data_prf(sub, task_list, model_list, var_to_load='settings', roi_fit='all', ses=default_ses, look_in=default_prf_dir)
+    with open(get_yml_settings_path()) as f:
+        fit_settings = yaml.safe_load(f)
     prfpy_stim = {}
     for task in task_list:
+        print(task)
         prfpy_stim[task] = PRFStimulus2D(
-            screen_size_cm=fit_settings[task][model_list]['screen_size_cm'],
-            screen_distance_cm=fit_settings[task][model_list]['screen_distance_cm'],
+            screen_size_cm=fit_settings['screen_size_cm'],
+            screen_distance_cm=fit_settings['screen_distance_cm'],
             design_matrix=dm_npy[task][:,:,cut_vols:], 
             axis=0,
-            TR=fit_settings[task][model_list]['TR']
+            TR=fit_settings['TR']
             )    
     return prfpy_stim
 

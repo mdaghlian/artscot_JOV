@@ -11,6 +11,7 @@ Run preprocessing: use JH linescanning pipeline (see https://github.com/gjheij/l
 * Fit the gaussian 
 
 [s3] call_N_fit_data
-* Fit extended (normalisation) models to the data
-* HRF is fixed for each voxel, based on [s2a]
+* Fit extended normalisation model
+
+Notebooks - analyses & plotting 
 

@@ -8,9 +8,11 @@ from matplotlib import patches
 # import linescanning.plotting as lsplt
 from scipy.stats import binned_statistic
 # from highlight_text import HighlightText, ax_text, fig_text
-from .utils import get_d2_target, get_d2_target_change
-from dag_prf_utils.prfpy_functions import prfpy_params_dict 
-from dag_prf_utils.utils import dag_coord_convert
+from artscot_JOV.utils import *
+from artscot_JOV.prfpy_functions import *
+
+# from dag_prf_utils.prfpy_functions import prfpy_params_dict 
+# from dag_prf_utils.utils import dag_coord_convert
 
 
 def rgba(r,g,b,a):

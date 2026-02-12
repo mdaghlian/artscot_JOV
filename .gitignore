@@ -1,1 +1,3 @@
 *.egg-info*
+*z_*
+*.pyc
