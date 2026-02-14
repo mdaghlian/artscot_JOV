@@ -17,7 +17,7 @@ from artscot_JOV.utils import *
 opj = os.path.join
 source_data_dir = os.getenv("DIR_DATA_SOURCE")
 derivatives_dir = '/data1/projects/dumoulinlab/Lab_members/Marcus/projects/pilot1/derivatives'
-code_dir = '/data1/projects/dumoulinlab/Lab_members/Marcus/projects/pilot1/code/artscot_JOV'
+code_dir = '/Users/marcusdaghlian/programs/ascot_sim/artscot_JOV'
 default_prf_dir = opj(derivatives_dir, 'prf_for_pub')
 default_ses = 'ses-1'
 
