@@ -1,4 +1,5 @@
 prf_for_pub/*
+analysis/r0_reports/figures/*
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
