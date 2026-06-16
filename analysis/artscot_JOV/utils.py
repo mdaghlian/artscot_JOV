@@ -1,6 +1,6 @@
 import numpy as np
 import sys
-from prfpy_csenf.rf import *
+from prfpy_csenf.rf import gauss2D_iso_cart
 
 def mask_time_series(ts, mask, ts_axis = 1, zero_pad = False):    
     '''mask_time_series    

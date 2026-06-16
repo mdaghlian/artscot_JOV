@@ -8,13 +8,13 @@ import sys
 opj = os.path.join
 
 
-from prfpy_csenf.csenf_plot_functions import *
 from prfpy_csenf.csenf_plot_functions import ncsf_calculate_aulcsf, ncsf_calculate_sfmax
-
-from dpu_mini.plot_functions import *
-from dpu_mini.utils import *
-# from dag_prf_utils.utils import *
-# from dag_prf_utils.plot_functions import *
+from prfpy_csenf.rf import gauss2D_iso_cart
+from dpu_mini.plot_functions import (
+    dag_add_ax_basics, dag_visual_field_scatter, dag_scatter,
+    dag_multi_scatter, dag_arrow_plot,
+)
+from dpu_mini.stats import dag_coord_convert, dag_pol_to_clock, dag_weighted_mean
 
 def prfpy_params_dict():
     '''

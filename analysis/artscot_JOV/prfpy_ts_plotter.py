@@ -1,17 +1,17 @@
 import numpy as np
 import sys
-from copy import deepcopy
+from copy import deepcopy, copy
 import matplotlib.pyplot as plt
-from prfpy_csenf.rf import *
-from prfpy_csenf.stimulus import *
-from prfpy_csenf.model import *
-
-
-from artscot_JOV.prfpy_functions import *
-from dpu_mini.utils import *
-from dpu_mini.plot_functions import *
-# from dag_prf_utils.utils import *
-# from dag_prf_utils.plot_functions import *
+import matplotlib as mpl
+from prfpy_csenf.rf import gauss2D_iso_cart, asymmetric_parabolic_CSF, nCSF_response_grid
+from prfpy_csenf.stimulus import PRFStimulus2D, CSenFStimulus
+from prfpy_csenf.model import (
+    Iso2DGaussianModel, CSS_Iso2DGaussianModel,
+    Norm_Iso2DGaussianModel, DoG_Iso2DGaussianModel, CSenFModel,
+)
+from prfpy_csenf.csenf_plot_functions import ncsf_calculate_crf_curve, update_fig_fontsize
+from artscot_JOV.prfpy_functions import Prf1T1M
+from dpu_mini.plot_functions import dag_update_fig_fontsize, dag_add_dm_to_ts
 
 
 class TSPlotter(Prf1T1M):
