@@ -7,9 +7,9 @@ import sys
 
 from prfpy_csenf.stimulus import PRFStimulus2D
 import pandas as pd
-from dpu_mini.utils import *
-from dpu_mini.fs_tools import *
-from artscot_JOV.utils import *
+from dpu_mini.utils import dag_find_file_in_folder, dag_hyphen_parse
+from dpu_mini.fs_tools import dag_load_roi
+from artscot_JOV.utils import set_tc_shape
 
 opj = os.path.join
 
