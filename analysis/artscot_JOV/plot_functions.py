@@ -5,15 +5,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 from matplotlib import patches
-# import linescanning.plotting as lsplt
 from scipy.stats import binned_statistic
-# from highlight_text import HighlightText, ax_text, fig_text
-from artscot_JOV.utils import *
-from artscot_JOV.prfpy_functions import *
-
-# from dag_prf_utils.prfpy_functions import prfpy_params_dict 
-# from dag_prf_utils.utils import dag_coord_convert
-
+from artscot_JOV.utils import get_d2_target, get_d2_target_change
+from artscot_JOV.prfpy_functions import prfpy_params_dict
+from dpu_mini.stats import dag_coord_convert
 
 def rgba(r,g,b,a):
     return [r/255,g/255,b/255,a]
@@ -29,16 +24,6 @@ def show_plot_cols():
     
 def get_plot_cols():
 
-# rgba(252,141, 89, 1)
-# rgba(227, 74, 51, 1)
-# rgba(179,  0,  0, 1)
-# rgba(123,204,196, 1)
-# rgba( 67,162,202, 1)
-# rgba(  8,104,172, 1)
-# rgba(223,101,176, 1)
-# rgba(221, 28,119, 1)
-# rgba(152,  0, 67, 1)
-
     plot_cols = {
         'AS0'   : '#1b9e77',
         'AS1'   : '#d95f02',
@@ -47,45 +32,7 @@ def get_plot_cols():
         'gauss' : '#f73816',
         'norm'  : '#377eb8', #'#f7c316',
         'css'   : '#7ff716',
-        'dog'   : '#1677f7'
-        
-
-
-        # "task-AS0_real"    : rgba(252,141, 89, .8),#'#fd8d3c',
-        # "task-AS0_gauss"   : rgba(227, 74, 51, .8),#'#f03b20',
-        # "task-AS0_norm"    : rgba(140,  0,  0, .8),#'#bd0026',
-        # "task-AS1_dog"     : rgba(  0,  0,  0, .8),#'#980043',
-        # #
-        # "task-AS1_real"    : rgba(123,204,196, .8),#'#7bccc4',
-        # "task-AS1_gauss"   : rgba( 67,162,202, .8),#'#43a2ca',
-        # "task-AS1_norm"    : rgba(  8, 50,172, .8),#'#0868ac',
-        # "task-AS1_dog"     : rgba(  0,  0,  0, .8),#'#980043',
-        # #
-        # "task-AS2_real"    : rgba(223,101,176, .8),#'#df65b0',
-        # "task-AS2_gauss"   : rgba(221, 28,119, .8),#'#dd1c77',
-        # "task-AS2_norm"    : rgba(100,  0, 67, .8),#'#980043',
-        # "task-AS2_dog"     : rgba(  0,  0,  0, .8),#'#980043',
-        # #
-        # "gauss"          : rgba( 27, 158, 119, 0.9),
-        # "GAUSS"          : rgba( 27, 158, 119, 0.5),
-        # "norm"           : rgba(217,  95,   2, 0.5),
-        # "NORM"           : rgba(217,  95,   2, 0.5),
-        # "dog"            : rgba(217, 200,   2, 0.5),
-        # "DOG"            : rgba(217, 200,   2, 0.5),
-        # "css"            : rgba(150,  95,   2, 0.5),
-        # "CSS"            : rgba(150,  95,   2, 0.5),        
-        # "DATA"           : rgba(117, 112, 179, 0.5),
-        # "data"           : rgba(117, 112, 179, 0.5),
-        # "real"           : '#cccccc',
-        # "SIMULATION"     : rgba(231,  41, 138, 0.5),
-        # "simulation"     : rgba(231,  41, 138, 0.5),
-        # "task-AS0"       : rgba(  0,   0,   0, 0.5),
-        # "AS0"            : rgba(  0,   0,   0, 0.5),
-        # "task-AS1"       : rgba(102, 166,  30, 0.5),
-        # "AS1"            : rgba(102, 166,  30, 0.5),
-        # "task-AS2"       : rgba(230, 171,   2, 0.5),
-        # "AS2"            : rgba(230, 171,   2, 0.5),
-        # "task-2R"        : rgba(200,   0,   0, 0.5),        
+        'dog'   : '#1677f7'     
         }
     return plot_cols
 
@@ -183,7 +130,7 @@ def basic_spatially_binned_param(x, y, param, ax, ecc_bounds=[], pol_bounds=[], 
                 else:
                     ecc_mean = (ecc_lower + ecc_upper)/2
                     pol_mean = (pol_lower + pol_upper)/2   
-                    x_mean,y_mean = dag_coord_conver(ecc_mean,pol_mean,old2new="pol2cart")
+                    x_mean,y_mean = dag_coord_convert(ecc_mean,pol_mean,old2new="pol2cart")
                 
                 pos_bin_mean[i_ecc, i_pol, 0] = x_mean
                 pos_bin_mean[i_ecc, i_pol, 1] = y_mean
