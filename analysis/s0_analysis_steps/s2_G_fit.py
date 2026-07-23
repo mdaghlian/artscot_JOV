@@ -33,7 +33,6 @@ Args:
     -t (--task=)        task (AS0, AS1, AS2)
     -r (--roi_fit=)     ROI to fit, e.g. all
     --prf_out           full path to output directory (e.g. /path/to/prf_for_pub)
-    --fs_dir            full path to FreeSurfer subjects directory
     --nr_jobs           number of parallel jobs
     --tc                use trust-constraint optimiser (default: L-BFGS-B)
     --bgfs              use L-BFGS-B optimiser
@@ -41,10 +40,12 @@ Args:
 
 ---------------------------------------------------------------------------------------------------
     """
-    prf_out     = None
-    fs_dir      = None
+    prf_out = None
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.abspath(opj(script_dir, '..', '..'))
+    prf_in = opj(project_root, 'prf_for_pub') # or replace with your path to prf_for_pub
+    assert os.path.exists(prf_in)
     print('\n\n\n\n')
-    
     # default
     ses = 'ses-1'
     model = 'gauss'
@@ -57,7 +58,7 @@ Args:
     sub = None
     task = None
     roi_fit = None
-    constraints = None
+    constraints = 'tc'
     nr_jobs = None
     ignore_mask = False
     overwrite = False
@@ -73,8 +74,6 @@ Args:
             task = dag_hyphen_parse('task', argv[i+1])
         elif arg == '--prf_out':
             prf_out = argv[i+1]
-        elif arg == '--fs_dir':
-            fs_dir = argv[i+1]
         elif arg in ("-r", "--roi_fit"):
             roi_fit = argv[i+1]
         elif arg in ("--nr_jobs"):
@@ -100,8 +99,6 @@ Args:
 
     if prf_out is None:
         sys.exit('Error: --prf_out is required')
-    # if fs_dir is None:
-    #     sys.exit('Error: --fs_dir is required')
 
     # Where to save everything
     prf_dir    = prf_out
@@ -145,14 +142,13 @@ Args:
     # ****************************************************
 
     # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< LOAD TIME SERIES & MASK THE ROI   
-    # num_vx = get_number_of_vx(sub=sub, fs_dir=fs_dir)
     print(prf_dir)
 
     m_prf_tc_data = load_data_tc(
         sub=sub, 
         ses=ses, 
         task_list=task, 
-        look_in=prf_dir, 
+        look_in=prf_in, 
         n_timepts=n_timepts
         )[task]
     num_vx = m_prf_tc_data.shape[0]
