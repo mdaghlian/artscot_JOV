@@ -126,6 +126,13 @@ def get_roi(sub, label, **kwargs):
     mask    np.ndarray (bool), shape (n_vertices,)
     '''
     look_in = kwargs.get('look_in', default_prf_dir)
+    if "demo" in label:
+        f = opj(look_in, sub, f'{sub}_roi.npz')
+        nvx = np.load(f)['v1custom'].shape[0]
+        roi_bool = np.zeros(nvx, dtype=bool)
+        roi_bool[:int(label.split('-')[-1])] = True
+        return roi_bool
+    
     f = opj(look_in, sub, f'{sub}_roi.npz')
     return np.load(f)[label]
 
