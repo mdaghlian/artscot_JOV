@@ -14,21 +14,23 @@ from dpu_mini.fs_tools import dag_load_nverts
 
 def main(argv):
     """
-    ---------------------------    
-    Get percent signal change of tasks time series
+    ---------------------------
+    Get percent signal change of task time series
 
     Args:
-        -s|--sub    <sub number>        number of subject's FreeSurfer directory from which you can 
-                                        omit "sub-" (e.g.,for "sub-001", enter "001").
-        -t|--task   <task name>         name of the experiment performed (e.g., "2R")
-        --prf_out   <prf_out>           Where to put everything 
+        -s|--sub        subject ID (e.g. 01 or sub-01)
+        -t|--task       task name (AS0, AS1, AS2)
+        --prf_out       full path to output directory (e.g. /path/to/prf_for_pub)
+        --input_dir     full path to directory containing denoised bold .npy files
+                        (pybest unzscored output, organised as <input_dir>/<sub>/<ses>/)
+        --fs_dir        full path to FreeSurfer subjects directory
     ---------------------------
     """
-    derivatives_dir = '/data1/projects/dumoulinlab/Lab_members/Marcus/projects/pilot1/derivatives'    
-    fs_dir = opj(derivatives_dir, 'freesurfer')
+    prf_out     = None
+    input_dir   = None
+    fs_dir      = None
     sub         = None
     task        = None
-    prf_out     = 'prf' 
 
     # Set parameters for psc
     ses         = 'ses-1'    
@@ -43,23 +45,34 @@ def main(argv):
     baseline_pt = [i-cut_vols for i in baseline_pt]
     print(f'Baseline is {baseline_pt}')
 
-    for i,arg in enumerate(argv):
+    for i, arg in enumerate(argv):
         if arg in ('-s', '--sub'):
             sub = dag_hyphen_parse('sub', argv[i+1])
         elif arg in ('-t', '--task'):
             task = dag_hyphen_parse('task', argv[i+1])
-        elif '--prf_out' in arg:
-            prf_out = argv[i+1]                
+        elif arg == '--prf_out':
+            prf_out = argv[i+1]
+        elif arg == '--input_dir':
+            input_dir = argv[i+1]
+        elif arg == '--fs_dir':
+            fs_dir = argv[i+1]
         elif arg in ('-h', '--help'):
             print(main.__doc__)
             sys.exit(2)
 
-    prf_dir = opj(derivatives_dir, prf_out)  
+    if prf_out is None:
+        sys.exit('Error: --prf_out is required')
+    if input_dir is None:
+        sys.exit('Error: --input_dir is required')
+    if fs_dir is None:
+        sys.exit('Error: --fs_dir is required')
+
+    prf_dir    = prf_out
     output_dir = opj(prf_dir, sub, ses)
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
     # Take the output from pybest folder
-    inputdir    = opj(derivatives_dir, 'pybest', sub, ses, 'unzscored')
+    inputdir    = opj(input_dir, sub, ses, 'unzscored')
     search_for = ["run-", task, file_ending]
     if space != None:
         search_for += [f"space-{space}"]
@@ -112,7 +125,7 @@ def main(argv):
     print(mean_lr_data.shape)
     print('')
     # CHECK NUMBER OF VX
-    nvx = dag_load_nverts(sub, fs_dir)
+    nvx = dag_load_nverts(sub=sub, fs_dir=fs_dir)
 
     assert sum(nvx) == mean_lr_data.shape[0]
 
