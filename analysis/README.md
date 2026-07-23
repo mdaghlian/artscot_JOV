@@ -16,18 +16,15 @@ analysis/
 │   └── prfpy_ts_plotter.py ← time-series plotting utilities
 ├── r0_reports/
 │   ├── artscot_plots.ipynb        ← main results notebook
-│   └── art_scot_simulations.ipynb ← simulation validation notebook
+│   └── art_scot_simulations.ipynb ← simulation notebook
 └── s0_analysis_steps/
-    ├── s0_prf_analysis.yml ← fitting hyperparameters
-    ├── s1_psc.py           ← percent signal change
+    ├── s0_prf_analysis.yml ← fitting parameters
+    ├── s1_psc.py           ← percent signal change (NOT NEEDED, as data is already PSC. Included for completeness)
     ├── s2_G_fit.py         ← Gaussian pRF fit
     ├── s3_N_fit.py         ← Divisive Normalisation fit
-    └── s{1,2,3}_qsub_*.py  ← SGE cluster submission wrappers
 ```
 
 ## Running the pipeline
-
-Steps must run in order. The cluster wrappers (`s*_qsub_*.py`) submit jobs via `qsub` (Sun Grid Engine); the plain scripts can also be run directly.
 
 ```bash
 # Step 1 — percent signal change
@@ -35,10 +32,10 @@ Steps must run in order. The cluster wrappers (`s*_qsub_*.py`) submit jobs via `
 # NOT NEEDED AS THE DATA IS ALREADY IN PSC
 
 # Step 2 — Gaussian pRF fit
-python s0_analysis_steps/s2_G_fit.py --sub 01 --task AS0
+python s0_analysis_steps/s2_G_fit.py --sub 01 --task AS0 --roi_fit v1custom --prf_out /output/prf/fits
 
 # Step 3 — Normalisation model fit
-python s0_analysis_steps/s3_N_fit.py --sub 01 --task AS0 --model norm
+python s0_analysis_steps/s3_N_fit.py --sub 01 --task AS0 --model norm --roi_fit v1custom --prf_out /output/prf/fits
 ```
 
 Repeat for each subject (`01`–`N`) and each task (`AS0`, `AS1`, `AS2`).
