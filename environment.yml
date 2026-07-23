@@ -7,12 +7,15 @@ dependencies:
   - numpy
   - matplotlib
   - scipy
+  - scikit-learn  
   - pandas
   - seaborn
   - nibabel
   - joblib
   - statsmodels
-  - pyyaml
+  - PyYaml
   - jupyterlab
   - ipykernel
+  - nibabel=5.3.3
+  - nilearn=0.13.1  
   - pip
