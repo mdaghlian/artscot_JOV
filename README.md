@@ -139,11 +139,31 @@ cd artscot_JOV
 
 ### 2. Create the conda environment
 
-A single script handles everything — it creates the `artscot` conda environment, pins the `dpu_mini` submodule to the tested commit, installs all three local packages in editable mode, and registers the Jupyter kernel.
+Install the conda environment with necessary packages
 
 ```bash
-bash create_env.sh
+cd artscot_JOV
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Automatically pulls the prf packages, but just to be certain - we make sure we have the correct version here
+DPU_MINI_COMMIT="d359609428b209ed62132b05766e4bebbda0de98"
+
+echo "==> Initialising git submodules..."
+git -C "$REPO_ROOT" submodule update --init --recursive
+git -C "$REPO_ROOT/prf_packages/dpu_mini" checkout "$DPU_MINI_COMMIT"
+
+echo "==> Creating conda environment from environment.yml..."
+conda env create -f "$REPO_ROOT/environment.yml"
+
+# Next activate the environment
 conda activate artscot
+python -m pip install -e "$REPO_ROOT/prf_packages/dpu_mini"
+python -m pip install -e "$REPO_ROOT/prf_packages/prfpy_csenf"
+python -m pip install -e "$REPO_ROOT/analysis"
+
+echo "==> Registering Jupyter kernel..."
+python -m ipykernel install --user --name artscot --display-name "artscot"
+
 ```
 
 Dependencies installed:
