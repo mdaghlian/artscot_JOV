@@ -16,7 +16,7 @@ from prfpy_csenf.stimulus import PRFStimulus2D
 from prfpy_csenf.model import Iso2DGaussianModel
 from prfpy_csenf.fit import Iso2DGaussianFitter
 
-from artscot_JOV.load_saved_info import get_design_matrix_npy, load_data_tc, get_roi, get_number_of_vx, get_yml_settings_path, load_params_generic 
+from artscot_JOV.load_saved_info import get_design_matrix_npy, load_data_tc, get_roi, get_yml_settings_path, load_params_generic 
 from artscot_JOV.utils import *
 
 from dpu_mini.utils import *
@@ -29,22 +29,20 @@ def main(argv):
 Fit the time series using the gaussian 
 
 Args:
-    -s (--sub=)         e.g., 01
+    -s (--sub=)         subject ID, e.g. 01 or sub-01
     -t (--task=)        task (AS0, AS1, AS2)
-    -r (--roi_fit=)     e.g., all, V1_exvivo
-    --nr_jobs           number of jobs
-    --verbose
-    --tc                
-    --bgfs
-    --ow               overwrite    
-    
-
-Example:
-
+    -r (--roi_fit=)     ROI to fit, e.g. all
+    --prf_out           full path to output directory (e.g. /path/to/prf_for_pub)
+    --fs_dir            full path to FreeSurfer subjects directory
+    --nr_jobs           number of parallel jobs
+    --tc                use trust-constraint optimiser (default: L-BFGS-B)
+    --bgfs              use L-BFGS-B optimiser
+    --ow                overwrite existing results
 
 ---------------------------------------------------------------------------------------------------
     """
-    derivatives_dir = '/data1/projects/dumoulinlab/Lab_members/Marcus/projects/pilot1/derivatives'    
+    prf_out     = None
+    fs_dir      = None
     print('\n\n\n\n')
     
     # default
@@ -54,14 +52,13 @@ Example:
     verbose = True
     cut_vols = 5
     n_timepts = 225 - cut_vols
-    
+
     # Specify
     sub = None
     task = None
     roi_fit = None
     constraints = None
     nr_jobs = None
-    prf_out = 'prf'    
     ignore_mask = False
     overwrite = False
     rsq_threshold = None
@@ -74,8 +71,10 @@ Example:
             ses = dag_hyphen_parse('ses', argv[i+1])            
         elif arg in ('-t', '--task'):
             task = dag_hyphen_parse('task', argv[i+1])
-        elif '--prf_out' in arg:
-            prf_out = argv[i+1]                
+        elif arg == '--prf_out':
+            prf_out = argv[i+1]
+        elif arg == '--fs_dir':
+            fs_dir = argv[i+1]
         elif arg in ("-r", "--roi_fit"):
             roi_fit = argv[i+1]
         elif arg in ("--nr_jobs"):
@@ -99,8 +98,13 @@ Example:
         elif '--' in arg:
             ow_prf_settings[arg.split('--')[-1]] = dag_arg_checker(argv[i+1])    
 
+    if prf_out is None:
+        sys.exit('Error: --prf_out is required')
+    # if fs_dir is None:
+    #     sys.exit('Error: --fs_dir is required')
+
     # Where to save everything
-    prf_dir = opj(derivatives_dir, prf_out)    
+    prf_dir    = prf_out
     output_dir = opj(prf_dir, sub, ses)
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
@@ -141,7 +145,7 @@ Example:
     # ****************************************************
 
     # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< LOAD TIME SERIES & MASK THE ROI   
-    num_vx = get_number_of_vx(sub=sub)
+    # num_vx = get_number_of_vx(sub=sub, fs_dir=fs_dir)
     print(prf_dir)
 
     m_prf_tc_data = load_data_tc(
@@ -151,6 +155,7 @@ Example:
         look_in=prf_dir, 
         n_timepts=n_timepts
         )[task]
+    num_vx = m_prf_tc_data.shape[0]
     roi_mask = get_roi(sub=sub, label=roi_fit)
     # Are we limiting the fits to an roi?
     num_vx_in_roi = roi_mask.sum()
@@ -308,6 +313,9 @@ Example:
         g_constraints = []   # uses trust-constraint (slower, but moves further from grid
     elif prf_settings['constraints']=='bgfs':
         g_constraints = None # uses l-BFGS (which is faster)
+    else: 
+        g_constraints = prf_settings['constraints']
+        
 
     i_start_time = datetime.now().strftime('%Y-%m-%d_%H-%M')
     print(f'Starting iter {i_start_time}, constraints = {g_constraints}')
