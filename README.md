@@ -24,11 +24,11 @@ Seven subjects (`sub-01` … `sub-07`) are included, each with the same file set
 ```
 prf_for_pub/
   mesh_info.pkl              ← native FreeSurfer pial meshes, all subjects (vertex coordinates for SCPC)
-  figures/, figures3/        ← figures written by artscot_plots.ipynb / artscot_stats.ipynb
+  figures_main/, figures3/   ← figures written by artscot_plots.ipynb / artscot_stats.ipynb
   spatial_scpc_euclidean/    ← SCPC results and simulation (written by r0_reports/spatial_scpc_euclidean*.py)
   sub-01/
   │   sub-01_roi.npz           ← ROI masks (bool, 617 224 vertices = both hemispheres)
-  │   sub-01_us_factor.npy     ← scalar: vol→surface upsampling factor (used for permutation tests)
+  │   sub-01_us_factor.npy     ← scalar: vol→surface upsampling factor
   └── ses-1/
       ├── *_desc-avg_bold.npy      ← PSC time courses  (3 files, one per task)
       ├── *_mean_epi.npy           ← mean EPI signal per vertex  (3 files)
@@ -125,9 +125,9 @@ boolean arrays aligned to the fsnative surface space.
 #### `sub-XX_us_factor.npy`
 
 Scalar float. The ratio of surface vertices to volumetric voxels for this
-subject (≈ 5.4 for sub-01). Used to correct for the non-independence of
-surface samples when computing cortical permutation tests in
-`artscot_plots.ipynb`.
+subject (≈ 5.4 for sub-01). Not used by the current analysis: within-subject
+tests account for spatial dependence with SCPC instead (see
+[Within-subject spatial statistics](#within-subject-spatial-statistics-scpc)).
 
 #### `mesh_info.pkl`
 
@@ -321,11 +321,11 @@ Loads the pre-computed pRF fit files from `prf_for_pub/` and produces all main p
 | **Timeseries plots** | Example vertex time series overlaid with model predictions (`ts_plot_eg2.png`) |
 | **Vector plots** | Arrow plots showing per-vertex pRF position shifts between AS0→AS1 and AS0→AS2, split by ROI and model (`vector_plot*.png`) |
 | **Paired bar** | Mean pRF shift magnitude per ROI, Gaussian vs DN, with paired t-test overlays |
-| **Stats** | Cortical permutation test comparing Gaussian and DN shift magnitudes across ROIs |
+| **Stats** | Within-subject SCPC tests (`scpc_mean_test`) of the Gaussian − DN shift-magnitude difference per subject × ROI; markers in the bar plots show p < 0.05 |
 | **Nonlinearities** | DN suppression parameters (b, d, amplitude ratio) per ROI (`param_roi_plot.png`) |
 | **Correlation** | Scatter of DN amplitude ratio vs Gaussian–DN shift difference (`amp_ratio_dshift_corr.png`) |
 
-Set `fig_output` at the top of the notebook to control where figures are saved (default: `prf_for_pub/figures`).
+Set `fig_output` at the top of the notebook to control where figures are saved (default: `prf_for_pub/figures_main`).
 
 ### `art_scot_simulations.ipynb` — simulation validation
 
