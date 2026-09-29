@@ -23,6 +23,9 @@ Seven subjects (`sub-01` … `sub-07`) are included, each with the same file set
 
 ```
 prf_for_pub/
+  mesh_info.pkl              ← native FreeSurfer pial meshes, all subjects (vertex coordinates for SCPC)
+  figures/, figures3/        ← figures written by artscot_plots.ipynb / artscot_stats.ipynb
+  spatial_scpc_euclidean/    ← SCPC results and simulation (written by r0_reports/spatial_scpc_euclidean*.py)
   sub-01/
   │   sub-01_roi.npz           ← ROI masks (bool, 617 224 vertices = both hemispheres)
   │   sub-01_us_factor.npy     ← scalar: vol→surface upsampling factor (used for permutation tests)
@@ -126,6 +129,14 @@ subject (≈ 5.4 for sub-01). Used to correct for the non-independence of
 surface samples when computing cortical permutation tests in
 `artscot_plots.ipynb`.
 
+#### `mesh_info.pkl`
+
+Native FreeSurfer pial meshes for all subjects, as a pickled dict
+`d[sub][hemi]` with `coords` (V×3, mm), `faces` (F×3) and `volume_info`.
+The pial vertex coordinates are loaded by `artscot_JOV.scpc_stats.load_pial_coords`
+(vertex order lh then rh, matching the ROI masks) and used as the locations for
+the within-subject SCPC tests (see [Within-subject spatial statistics](#within-subject-spatial-statistics-scpc)).
+
 ---
 
 ## Setup
@@ -167,7 +178,8 @@ python -m ipykernel install --user --name artscot --display-name "artscot"
 ```
 
 Dependencies installed:
-- Python 3.10, numpy, scipy, matplotlib, seaborn, pandas, nibabel, joblib, statsmodels, pyyaml, jupyterlab
+- Python 3.12, numpy, scipy, matplotlib, seaborn, pandas, nibabel, joblib, statsmodels, pyyaml, jupyterlab
+- [`scpc-python`](https://github.com/spatial-spur/scpc-python) — SCPC spatial-correlation-robust inference (Müller & Watson 2022); installed from GitHub by `environment.yml`, pinned to a tested commit. Needs Python ≥ 3.11
 - `prf_packages/prfpy_csenf` — pRF modelling and fitting ([spinoza-centre/prfpy_csenf](https://github.com/spinoza-centre/prfpy_csenf))
 - `prf_packages/dpu_mini` — general MRI/surface utilities ([mdaghlian/dpu_mini](https://github.com/mdaghlian/dpu_mini))
 - `analysis/` — this repo's `artscot_JOV` package (editable)
@@ -192,11 +204,15 @@ artscot_JOV/
 │   ├── artscot_JOV/            ← Python package (importable as artscot_JOV)
 │   │   ├── utils.py            ← scotoma geometry and time-series helpers
 │   │   ├── load_saved_info.py  ← data loading: time courses, pRF fits, stimuli, ROIs
+│   │   ├── scpc_stats.py       ← within-subject SCPC tests (scpc-python on pial coordinates)
 │   │   ├── prfpy_functions.py  ← Prf1T1M / PrfMulti / PrfDiff classes
 │   │   ├── plot_functions.py   ← colour palettes and plotting helpers
 │   │   └── prfpy_ts_plotter.py ← time-series plotting utilities
 │   ├── r0_reports/
 │   │   ├── artscot_plots.ipynb        ← main results notebook
+│   │   ├── spatial_scpc_euclidean.py  ← within-subject SCPC tests, all subjects × ROIs × tasks
+│   │   ├── spatial_scpc_euclidean_simulate.py ← null / power simulation of the SCPC tests
+│   │   ├── scpc_explained.md          ← what SCPC does and how it is applied here
 │   │   └── art_scot_simulations.ipynb ← simulation validation notebook
 │   └── s0_analysis_steps/
 │       ├── s0_prf_analysis.yml ← fitting hyperparameters
@@ -261,11 +277,39 @@ Fits the Divisive Normalisation (DN) model, initialised from the Gaussian fit of
 python s3_N_fit.py --sub 01 --task AS0 --model norm
 ```
 
+### Within-subject spatial statistics (SCPC)
+
+Tests, within each subject × ROI × task, whether the mean pRF shift difference
+d = shift(Gauss) − shift(DN) across vertices differs from zero. Neighbouring
+vertices are not independent, so vertex-wise tests are replaced by SCPC
+(Müller & Watson 2022), computed with the `scpc-python` package on the pial
+vertex coordinates (Euclidean distance). The assumed worst-case spatial
+correlation is stated as a correlation length (5 mm and 10 mm). See
+[`analysis/r0_reports/scpc_explained.md`](analysis/r0_reports/scpc_explained.md).
+
+```bash
+conda activate artscot
+cd analysis/r0_reports
+python spatial_scpc_euclidean.py            # ~8 min; writes prf_for_pub/spatial_scpc_euclidean/
+python spatial_scpc_euclidean_simulate.py   # ~12 min; writes prf_for_pub/spatial_scpc_euclidean/simulate/
+```
+
+In code:
+
+```python
+from artscot_JOV.scpc_stats import load_pial_coords, load_shift_diff, scpc_mean_test
+from artscot_JOV.load_saved_info import get_roi
+xyz_all = load_pial_coords('sub-02')
+d, vx_mask = load_shift_diff('sub-02', 'AS1')          # rsq > 0.1, ecc < 5 in all four fits
+vx = np.where(vx_mask & get_roi('sub-02', 'v1custom'))[0]
+res = scpc_mean_test(d[vx], xyz_all[vx], len0=5.0)     # mean, se, pvalue, ci_lo, ci_hi, q, ...
+```
+
 ---
 
 ## Notebooks
 
-Figures are saved as `.png` files to the output directory set at the top of each notebook (`fig_output`).
+Figures are saved as `.png` files to the output directory set at the top of each notebook (`fig_output`), inside `prf_for_pub/` so they are kept with the data rather than in git.
 
 ### `artscot_plots.ipynb` — main results
 
@@ -281,7 +325,7 @@ Loads the pre-computed pRF fit files from `prf_for_pub/` and produces all main p
 | **Nonlinearities** | DN suppression parameters (b, d, amplitude ratio) per ROI (`param_roi_plot.png`) |
 | **Correlation** | Scatter of DN amplitude ratio vs Gaussian–DN shift difference (`amp_ratio_dshift_corr.png`) |
 
-Set `fig_output` at the top of the notebook to control where figures are saved (default: `./figures`).
+Set `fig_output` at the top of the notebook to control where figures are saved (default: `prf_for_pub/figures`).
 
 ### `art_scot_simulations.ipynb` — simulation validation
 
@@ -327,3 +371,13 @@ Handles all file I/O. Key functions:
 - `get_scotoma_info(sub)` — returns scotoma centre, radius, and pixel grid for each task
 - `get_prfpy_stim(sub, task_list)` — construct `PRFStimulus2D` objects from design matrices
 - `get_roi(sub, label)` — boolean surface mask for a named ROI
+
+### `artscot_JOV/scpc_stats.py`
+
+Within-subject SCPC tests of mean(d) = 0 over an ROI, via `scpc-python`:
+
+- `load_pial_coords(sub)` — pial vertex coordinates (mm), lh then rh
+- `load_shift_diff(sub, task)` — d = shift(Gauss) − shift(DN) at every vertex, and the threshold mask
+- `avc_for_length(xyz, len0)` — the `avc` that `scpc-python` needs for a worst-case correlation length `len0` (mm), computed with the package's own helpers
+- `scpc_mean_test(y, xyz, len0=5.0)` — SCPC test and 95% CI for the mean of `y` (or `avc=` for a fixed average pairwise correlation)
+- `DEFAULT_OPTIONS` — the worst-case settings reported (`len_5mm`, `len_10mm`, and fixed `avc` 0.03 / 0.10 for comparison)

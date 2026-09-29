@@ -3,7 +3,7 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - python=3.10
+  - python=3.12      # scpc-python needs >= 3.11
   - numpy
   - matplotlib
   - scipy
@@ -19,3 +19,6 @@ dependencies:
   - nibabel=5.3.3
   - nilearn=0.13.1  
   - pip
+  - pip:
+      # SCPC spatial inference (Mueller & Watson 2022), pinned to the tested commit
+      - "scpc-python @ git+https://github.com/spatial-spur/scpc-python@83716a88de329d834b7b981d9bab7d58791b1633"
