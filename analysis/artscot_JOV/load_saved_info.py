@@ -25,6 +25,10 @@ def get_yml_settings_path(yml_name='s0_prf_analysis.yml'):
     yml_path = opj(os.path.dirname(_PKG_DIR), 's0_analysis_steps', yml_name)
     return yml_path
 
+def get_us_factor(sub):
+    """Load the vol-to-surface upsampling factor pre-computed for each subject."""
+    f = opj(default_prf_dir, sub, f'{sub}_us_factor.npy')
+    return np.load(f)
 
 def load_data_tc(sub, task_list, ses=default_ses, look_in=default_prf_dir, do_demo=False, n_timepts=225):
     '''Load PSC time courses from prf_for_pub.
