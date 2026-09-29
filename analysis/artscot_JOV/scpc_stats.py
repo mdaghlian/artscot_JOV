@@ -32,15 +32,13 @@ from artscot_JOV.load_saved_info import default_prf_dir, load_data_prf
 opj = os.path.join
 default_mesh_path = opj(default_prf_dir, 'mesh_info.pkl')
 
-# scpc-python requires avc in (0.001, 0.99)
+# scpc-python requires its avc argument in (0.001, 0.99)
 AVC_MIN, AVC_MAX = 0.0011, 0.989
 
-# Worst-case options used in the analysis: ('len', mm) -> avc matched per ROI,
-# ('avc', value) -> the same avc for every ROI (for comparison only; a fixed
-# avc implies a different correlation length in every ROI).
-DEFAULT_OPTIONS = {
-    'len_5mm': ('len', 5.0),     # just beyond the measurement-noise range
-    'len_10mm': ('len', 10.0),   # conservative
+# Worst-case correlation lengths (mm) used in the analysis
+DEFAULT_LENGTHS = {
+    'len_5mm': 5.0,     # just beyond the measurement-noise range
+    'len_10mm': 10.0,   # conservative
 }
 
 _MESH_CACHE = {}
@@ -102,29 +100,25 @@ def avc_for_length(xyz, len0):
     return get_avc(1.0 / len0, lvech(get_distmat(xyz, latlong=False)))
 
 
-def scpc_mean_test(y, xyz, len0=None, avc=None):
+def scpc_mean_test(y, xyz, len0):
     '''SCPC test of mean(y) = 0 with scpc-python, on Euclidean coordinates.
-
-    Give the worst case as a correlation length len0 (mm; preferred) OR
-    as a fixed avc.
 
     Parameters
     ----------
     y    : (n,) values at the ROI vertices (e.g. d[vx])
     xyz  : (n, 3) pial coordinates of the same vertices (mm)
+    len0 : worst-case correlation length (mm): correlation exp(-distance / len0)
 
     Returns
     -------
     dict: mean, se, tau, pvalue, ci_lo, ci_hi (95%), q (number of spatial
-    components), cv (critical value), avc (used), avc_clipped, c0, method
-    ('exact' below 4500 vertices), len0_mm (worst-case length; exact branch)
+    components), cv (critical value), avc (value passed to scpc-python, implied
+    by len0 on these vertices), avc_clipped, c0, method ('exact' below 4500
+    vertices), len0_mm (worst-case length recovered from c0; exact branch)
     '''
     import statsmodels.formula.api as smf
     from scpc import scpc
-    if (len0 is None) == (avc is None):
-        raise ValueError('give exactly one of len0 or avc')
-    if avc is None:
-        avc = avc_for_length(xyz, len0)
+    avc = avc_for_length(xyz, len0)
     avc_use = float(np.clip(avc, AVC_MIN, AVC_MAX))
     df = pd.DataFrame(np.asarray(xyz, dtype=float), columns=['x', 'y', 'z'])
     df['d'] = np.asarray(y, dtype=float)

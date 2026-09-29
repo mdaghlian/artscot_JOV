@@ -7,18 +7,14 @@ All SCPC calculations are done by scpc-python (Becker, Boll & Voth 2026,
 https://github.com/spatial-spur/scpc-python; Mueller & Watson 2022), called via
 artscot_JOV.scpc_stats. See r0_reports/scpc_explained.md.
 
-Worst-case options (each run for every subject x ROI x task;
-artscot_JOV.scpc_stats.DEFAULT_OPTIONS)
-------------------------------------------------------------
-len_5mm, len_10mm : worst-case correlation length l0 = 5 / 10 mm. scpc-python
-                    takes the worst case as avc (average pairwise correlation),
-                    so avc is set per ROI to the value implied by
-                    exp(-distance / l0) on that ROI's Euclidean distances,
-                    computed with the package's own helpers.
-avc_0.03, avc_0.10: fixed avc for every ROI (0.03 = package default and
-                    Mueller & Watson's "strong" benchmark; 0.10 = "very strong").
-                    For comparison: a fixed avc implies a different correlation
-                    length in every ROI.
+Worst case (each run for every subject x ROI x task;
+artscot_JOV.scpc_stats.DEFAULT_LENGTHS)
+------------------------------------------------------
+len_5mm, len_10mm : worst-case correlation length l0 = 5 / 10 mm, i.e.
+                    correlation exp(-distance / l0). scpc-python takes the worst
+                    case as avc (average pairwise correlation), so avc is set per
+                    ROI to the value l0 implies on that ROI's Euclidean
+                    distances, computed with the package's own helpers.
 
 Coordinates: raw pial surface coordinates (mm) of the thresholded ROI
 vertices, both hemispheres together (no offset).
@@ -31,7 +27,7 @@ python spatial_scpc_euclidean.py sub-01 sub-02
 
 Outputs (prf_for_pub/spatial_scpc_euclidean/)
 ---------------------------------------------
-scpc_euclidean_results.csv : one row per subject x task x ROI x option
+scpc_euclidean_results.csv : one row per subject x task x ROI x worst-case length
 scpc_euclidean_bars.png    : per-ROI mean d, per-subject significance
 """
 import os
@@ -45,7 +41,7 @@ import matplotlib.pyplot as plt
 
 from artscot_JOV.load_saved_info import default_prf_dir, get_roi
 from artscot_JOV.scpc_stats import (
-    load_pial_coords, load_shift_diff, scpc_mean_test, DEFAULT_OPTIONS,
+    load_pial_coords, load_shift_diff, scpc_mean_test, DEFAULT_LENGTHS,
 )
 
 opj = os.path.join
@@ -60,17 +56,17 @@ roi_list = ['v1custom', 'v2custom', 'v3custom', 'v3abcustom', 'v4custom',
             'LOcustom', 'TOcustom', 'IPScustom']
 task_list = ['AS1', 'AS2']
 min_rsq, max_ecc, min_vx = 0.1, 5, 50          # same as PAIRED_df
-OPTIONS = DEFAULT_OPTIONS
+OPTIONS = DEFAULT_LENGTHS                      # name -> worst-case length (mm)
 
 
 # ---------------------------------------------------------------------------
 # Run
 # ---------------------------------------------------------------------------
 def run_case(y, xyz):
-    '''All worst-case options for one subject x task x ROI.'''
+    '''All worst-case lengths for one subject x task x ROI.'''
     rows = []
-    for name, (kind, val) in OPTIONS.items():
-        r = scpc_mean_test(y, xyz, **({'len0': val} if kind == 'len' else {'avc': val}))
+    for name, len0 in OPTIONS.items():
+        r = scpc_mean_test(y, xyz, len0=len0)
         rows.append({'option': name, 'mean_d': r.pop('mean'), **r})
     return rows
 

@@ -24,8 +24,8 @@ Marginals : "gaussian" (unit variance), or "empirical": the Gaussian field is
             mapped through the quantiles of that ROI's real d minus its mean
             (Gaussian copula), so each vertex has the real distribution of d
             with mean 0. The mapping slightly weakens the correlation.
-Options   : the four worst-case options of spatial_scpc_euclidean.py
-            (len_5mm, len_10mm, avc_0.03, avc_0.10).
+Options   : the worst-case lengths of spatial_scpc_euclidean.py
+            (artscot_JOV.scpc_stats.DEFAULT_LENGTHS: len_5mm, len_10mm).
 Power     : Gaussian noise, len_true = 5 mm, mean shifted by delta (in noise SD
             units), delta in {0.25, 0.5, 1.0}.
 
@@ -33,8 +33,9 @@ How scpc-python is used
 -----------------------
 Calling scpc() for every simulated dataset rebuilds the spatial setup each
 time (~1 s), which is too slow for tens of thousands of datasets. The setup
-depends only on the coordinates and avc, so it is built once per geometry x
-option with the package's own set_oms_wfin(). Each dataset then uses the
+depends only on the coordinates and the worst case (passed to scpc-python as
+the avc implied by the worst-case length), so it is built once per geometry x
+length with the package's own set_oms_wfin(). Each dataset then uses the
 package's max_rp() for the p-value. For an intercept-only OLS model ('d ~ 1'),
 scpc() computes the statistic from wj = n * (X'X)^-1 * resid + mean = d itself,
 so tau = sqrt(q) * w0'd / ||W1'd|| (scpc/core.py). The script checks this
@@ -70,8 +71,8 @@ from scpc import scpc
 from scpc.utils.spatial import set_oms_wfin, max_rp, get_distmat
 
 from artscot_JOV.load_saved_info import get_roi
-from artscot_JOV.scpc_stats import (  # same data loading and options as the main analysis
-    load_pial_coords, load_shift_diff, avc_for_length, DEFAULT_OPTIONS as OPTIONS,
+from artscot_JOV.scpc_stats import (  # same data loading and lengths as the main analysis
+    load_pial_coords, load_shift_diff, avc_for_length, DEFAULT_LENGTHS as OPTIONS,
     AVC_MIN, AVC_MAX,
 )
 from spatial_scpc_euclidean import min_vx, out_dir as main_out_dir
@@ -159,11 +160,10 @@ def run(n_sim=N_SIM):
         assert m.sum() >= min_vx
         vx = np.where(m)[0]
         xyz, d_roi = load_pial_coords(sub)[vx], d[vx]
-        # one scpc-python setup per worst-case option
+        # one scpc-python setup per worst-case length
         setups, avcs, len0 = {}, {}, {}
-        for name, (kind, val) in OPTIONS.items():
-            avc = avc_for_length(xyz, val) if kind == 'len' else val
-            avcs[name] = float(np.clip(avc, AVC_MIN, AVC_MAX))
+        for name, length in OPTIONS.items():
+            avcs[name] = float(np.clip(avc_for_length(xyz, length), AVC_MIN, AVC_MAX))
             setups[name] = package_setup(xyz, avcs[name])
             len0[name] = 1.0 / setups[name].c0   # worst-case length in mm (exact branch)
         geo = f'{sub} {roi.replace("custom", "")} {task} (n={len(vx)})'
@@ -212,7 +212,7 @@ def run(n_sim=N_SIM):
 # Checks and figures
 # ---------------------------------------------------------------------------
 def summarise(fpr, max_check, n_sim):
-    '''Expectation: for each option, FPR not significantly above 5% whenever the
+    '''Expectation: for each worst-case length, FPR not significantly above 5% whenever the
     true length <= its worst-case length len0 (Gaussian noise).'''
     lines = [f'n_sim = {n_sim} per condition; shortcut vs scpc(): max |dp| = {max_check:.1e}']
     for marg in MARGINALS:
@@ -233,8 +233,7 @@ def summarise(fpr, max_check, n_sim):
     open(opj(out_dir, 'sim_summary.txt'), 'w').write(txt + '\n')
 
 
-OPT_COL = {'len_5mm': '#2a6fdb', 'len_10mm': '#173f7f', 'avc_0.03': '#d9730d',
-           'avc_0.10': '#8c4a0a'}
+OPT_COL = {'len_5mm': '#2a6fdb', 'len_10mm': '#d9730d'}
 
 
 def plot_fpr(fpr):

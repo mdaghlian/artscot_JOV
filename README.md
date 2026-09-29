@@ -379,5 +379,5 @@ Within-subject SCPC tests of mean(d) = 0 over an ROI, via `scpc-python`:
 - `load_pial_coords(sub)` — pial vertex coordinates (mm), lh then rh
 - `load_shift_diff(sub, task)` — d = shift(Gauss) − shift(DN) at every vertex, and the threshold mask
 - `avc_for_length(xyz, len0)` — the `avc` that `scpc-python` needs for a worst-case correlation length `len0` (mm), computed with the package's own helpers
-- `scpc_mean_test(y, xyz, len0=5.0)` — SCPC test and 95% CI for the mean of `y` (or `avc=` for a fixed average pairwise correlation)
-- `DEFAULT_OPTIONS` — the worst-case settings reported (`len_5mm`, `len_10mm`, and fixed `avc` 0.03 / 0.10 for comparison)
+- `scpc_mean_test(y, xyz, len0=5.0)` — SCPC test and 95% CI for the mean of `y`, for a worst-case correlation length `len0` (mm)
+- `DEFAULT_LENGTHS` — the worst-case correlation lengths reported (`len_5mm`, `len_10mm`)
